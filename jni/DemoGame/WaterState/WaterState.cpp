@@ -72,7 +72,6 @@ namespace Game
 
 		Camera2D::UpdateAll(dtime);
 
-
 		if (m_pWSInputController->GetLeftMouseButtonPressed())
 		{
 			Vector2f pos = m_pWSInputController->GetMousePosition();
@@ -88,11 +87,13 @@ namespace Game
 				position += Vector2f(1.0f,0.0f).Rotated(Random::Double(0.0f,360.0f)) * Random::Double(0,50.0f);
 				CreateRockObject(position);
 			}
+			//CreateRockObject(m_pWSInputController->GetMousePosition());
 		}
 
-
-		for (auto &rock : m_rockObjects)
+		for (int rockIndex = 0; rockIndex < m_rockObjects.size(); ++ rockIndex)
 		{
+			WSRockObject *rock = m_rockObjects[rockIndex];
+
 			rock->Update(dtime);
 
 			float totalCoveredArea = 0.f;
@@ -101,12 +102,49 @@ namespace Game
 			springTriangle.resize(3);
 
 			vector <Vector2f> rockPolygon;
+			float minx, miny, maxx, maxy;
+			minx = miny = 2000000000.f;
+			maxx = maxy = -2000000000.f;
+
 			for (int i = 0; i < rock->GetShape()->m_vertexCount; ++ i)
-				rockPolygon.push_back(rock->GetShape()->m_vertices[i] + rock->GetBody()->GetPosition());
+			{
+				// get the updated points on the rock and store them in rockPolygon
+				float rotation = rock->GetBody()->GetOrientation();
+				Vector2f rockPoint = rock->GetShape()->m_vertices[i].Rotated(rotation); // rotation
+				rockPoint += rock->GetBody()->GetPosition(); // translation
+				rockPolygon.push_back(rockPoint);
 
+				minx = min(minx, rockPoint.x);
+				miny = min(miny, rockPoint.y);
+				maxx = max(maxx, rockPoint.x);
+				maxy = max(maxy, rockPoint.y);
+			}
+
+
+			// delete the rock if it is out of screen
+			GLint screenWidth = Render::GetScreenWidth();
+			GLint screenHeight = Render::GetScreenHeight();
+			if (miny > 1.f * screenHeight || minx > 1.f * screenWidth || maxx < 0.f)
+			{
+				// the rock is out of screen and needs to be deleted
+				swap(m_rockObjects[rockIndex], m_rockObjects[m_rockObjects.size() - 1]);
+				m_rockObjects.pop_back();
+				rock->~WSRockObject();
+				continue;
+			}
+
+			// calculate the area of the rock covered by water
 			vector <Vector2f> result;
+			// optimize calculating the area of the rock covered by water by intersecting with the rock only the watersprings that could matter
+			int leftSpringLimit, rightSpringLimit;
+			float leftPercent = 1.f * minx / screenWidth;
+			float rightPercent = 1.f * maxx / screenWidth;
+			leftSpringLimit = leftPercent * m_water.GetSpringsCount() - 2;
+			rightSpringLimit = rightPercent * m_water.GetSpringsCount() + 2;
+			leftSpringLimit = max(1, leftSpringLimit);
+			rightSpringLimit = min(m_water.GetSpringsCount(), rightSpringLimit);
 
-			for (int i = 1; i < m_water.GetSpringsCount(); ++ i)
+			for (int i = leftSpringLimit; i < rightSpringLimit; ++ i)
 			{
 				float currentSpringIntersectionArea = 0.f;
 				for (int j = 0; j < 3; ++ j)
@@ -161,7 +199,18 @@ namespace Game
 		for (auto &rock : m_rockObjects)
 		{
 			rock->Render();
+			/////////////////debug////////////////
+			for (int i = 0; i < rock->GetShape()->m_vertexCount; ++ i)
+			{
+				Vector2f debugPoint = rock->GetShape()->m_vertices[i].Rotated(rock->GetBody()->GetOrientation());
+				debugPoint += rock->GetBody()->GetPosition();
+				SpriteVertex debugPointVertex(debugPoint.x, debugPoint.y, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, SpriteVertex::NONE);
+				GLushort pointIndex = 0;
+				Batcher::SendSpriteVertexData(&debugPointVertex, 1, &pointIndex, 1, m_pWhiteTexture, IndexData::POINTS, 1.f);
+			}
+			//////////////debug////////////////////
 		}
+
 
 		m_pWSInputController->Render();
 	}
