@@ -168,7 +168,6 @@ namespace Game
 			rock->SetLinearAcceleration(Vector2f(0.f, -waterWeight));
 		}
 
-
 		m_world->Update(dtime);
 
 		if (m_pWSInputController->IsUserRequestingExit())
@@ -199,16 +198,6 @@ namespace Game
 		for (auto &rock : m_rockObjects)
 		{
 			rock->Render();
-			/////////////////debug////////////////
-			for (int i = 0; i < rock->GetShape()->m_vertexCount; ++ i)
-			{
-				Vector2f debugPoint = rock->GetShape()->m_vertices[i].Rotated(rock->GetBody()->GetOrientation());
-				debugPoint += rock->GetBody()->GetPosition();
-				SpriteVertex debugPointVertex(debugPoint.x, debugPoint.y, 0.f, 0.f, 1.f, 0.f, 0.f, 1.f, SpriteVertex::NONE);
-				GLushort pointIndex = 0;
-				Batcher::SendSpriteVertexData(&debugPointVertex, 1, &pointIndex, 1, m_pWhiteTexture, IndexData::POINTS, 1.f);
-			}
-			//////////////debug////////////////////
 		}
 
 
