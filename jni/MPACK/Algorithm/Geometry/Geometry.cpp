@@ -81,8 +81,6 @@ namespace MPACK
 
 				assert(!(det < 0.f)); // pozx, pozy, pozz form a turning in reverse trigonometric order
 
-
-
 				if (turning == 0)
 				{
 					if (det > 0.f)
@@ -200,6 +198,94 @@ namespace MPACK
 				sum += (polygon[i].x * polygon[moduloFunc(i+1, polygonSize)].y - polygon[moduloFunc(i+1, polygonSize)].x * polygon[i].y);
 			}
 			return sum / 2.f;
+		}
+		bool IntersectSegmentWithConvexPolygon(const Vector2f &A, const Vector2f &B, const std::vector<Math::Vector2f> &polygon, Vector2f &resultX, Vector2f &resultY)
+		{
+
+			int sz = polygon.size();
+			assert(sz >= 3);
+
+			int turning = 0;
+			auto moduloFunc = [](int x, int modValue) mutable -> int
+					{
+						while (x < 0) x += modValue;
+						while (x >= modValue) x-= modValue;
+						return x;
+					};
+
+
+			for (int i = 0; i < sz; ++ i)
+			{
+				int pozx, pozy, pozz;
+				pozx = moduloFunc(i-1, sz);
+				pozy = moduloFunc(i, sz);
+				pozz = moduloFunc(i+1, sz);
+				float det = Cross(polygon[pozx], polygon[pozy], polygon[pozz]);
+
+				assert(!(det < 0.f)); // if pozx, pozy, pozz form a turning in reverse trigonometric order than the program will crash
+
+				if (turning == 0)
+				{
+					if (det > 0.f)
+					{
+						turning = 1;
+					}
+				}
+				else
+				{
+					assert(!(det < 0.f));
+				}
+			}
+
+			assert(turning == 1);
+			// the points are sorted in trigonometric order
+
+			bool resultOfIntersection = false;
+			int intersectionsCount = 0;
+			float area = 0.f;
+			for (int i = 0; i < sz; ++ i)
+			{
+				int pozx = i;
+				int pozy = moduloFunc(i-1, sz);
+				Vector2f intersection;
+				bool lineIntersectsSideOfPolygon = Geom<float>::SegmentIntersect(A, B, polygon[pozx], polygon[pozy], intersection);
+				if(lineIntersectsSideOfPolygon)
+				{
+					resultOfIntersection = true;
+					if (intersectionsCount == 0)
+					{
+						resultX = intersection;
+					}
+					else
+					{
+						resultY = intersection;
+					}
+
+					++intersectionsCount;
+				}
+				std::vector <Math::Vector2f> pointsAux;
+				pointsAux.push_back(A);
+				pointsAux.push_back(polygon[pozx]);
+				pointsAux.push_back(polygon[pozy]);
+				area += PolygonArea(pointsAux);
+			}
+
+			if (intersectionsCount == 0)
+				return false;
+
+			if (intersectionsCount == 2)
+				return true;
+
+			// intersectionsCount == 1 and now we are sure that either A or B is in polygon and this point will be kept in resultY
+			if (fabs(area - PolygonArea(polygon)) < 0.000001f)
+			{
+				resultY = A;
+			}
+			else
+			{
+				resultY = B;
+			}
+			return true;
 		}
 	}
 }

@@ -54,42 +54,8 @@ namespace Game
 		m_world = new World(1.f/60.f, 10);
 	}
 
-	int WaterState::Update()
+	void WaterState::ApplyForcesToRocks(float dtime)
 	{
-		float dtime = Global::pContext->pTimeService->Elapsed();
-
-		m_timeSinceLastWave += dtime;
-
-		if (m_timeSinceLastWave > m_timeBetweenWaves)
-		{
-			m_water.Splash(Random::Int(0, m_water.GetSpringsCount()), Vector2f(0.f, Random::Double(-60.f, 60.f)));
-			m_timeSinceLastWave = 0.f;
-		}
-
-		m_pWSInputController->Update(dtime);
-
-		m_water.Update(dtime);
-
-		Camera2D::UpdateAll(dtime);
-
-		if (m_pWSInputController->GetLeftMouseButtonPressed())
-		{
-			Vector2f pos = m_pWSInputController->GetMousePosition();
-			m_water.ClickSplash(pos);
-			//LOGI("(%f, %f)", pos.x, pos.y);
-		}
-
-		if (m_pWSInputController->GetLeftMouseButtonUp())
-		{
-			for (int i = 1; i <= 5; ++ i)
-			{
-				Vector2f position = m_pWSInputController->GetMousePosition();
-				position += Vector2f(1.0f,0.0f).Rotated(Random::Double(0.0f,360.0f)) * Random::Double(0,50.0f);
-				CreateRockObject(position);
-			}
-			//CreateRockObject(m_pWSInputController->GetMousePosition());
-		}
-
 		for (int rockIndex = 0; rockIndex < m_rockObjects.size(); ++ rockIndex)
 		{
 			WSRockObject *rock = m_rockObjects[rockIndex];
@@ -165,8 +131,48 @@ namespace Game
 			float waterWeight = m_water.s_waterDensity * totalCoveredArea * 98.f;
 
 			rock->SetLinearAcceleration(Vector2f(0.f, 98.f));
-			rock->SetLinearAcceleration(Vector2f(0.f, -waterWeight));
+			rock->SetLinearAcceleration(Vector2f(0.f, -waterWeight)); /// set archimedes force to this rock
 		}
+	}
+
+	int WaterState::Update()
+	{
+		float dtime = Global::pContext->pTimeService->Elapsed();
+
+		m_timeSinceLastWave += dtime;
+
+		if (m_timeSinceLastWave > m_timeBetweenWaves)
+		{
+			m_water.Splash(Random::Int(0, m_water.GetSpringsCount()), Vector2f(0.f, Random::Double(-60.f, 60.f)));
+			m_timeSinceLastWave = 0.f;
+		}
+
+		m_pWSInputController->Update(dtime);
+
+		m_water.Update(dtime);
+
+		Camera2D::UpdateAll(dtime);
+
+		if (m_pWSInputController->GetLeftMouseButtonPressed())
+		{
+			Vector2f pos = m_pWSInputController->GetMousePosition();
+			m_water.ClickSplash(pos);
+			//LOGI("(%f, %f)", pos.x, pos.y);
+		}
+
+		if (m_pWSInputController->GetLeftMouseButtonUp())
+		{
+			/*for (int i = 1; i <= 5; ++ i)
+			{
+				Vector2f position = m_pWSInputController->GetMousePosition();
+				position += Vector2f(1.0f,0.0f).Rotated(Random::Double(0.0f,360.0f)) * Random::Double(0,50.0f);
+				CreateRockObject(position);
+			}*/
+			CreateRockObject(m_pWSInputController->GetMousePosition());
+		}
+
+		ApplyForcesToRocks(dtime);
+
 
 		m_world->Update(dtime);
 
@@ -199,7 +205,6 @@ namespace Game
 		{
 			rock->Render();
 		}
-
 
 		m_pWSInputController->Render();
 	}

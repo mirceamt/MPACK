@@ -30,6 +30,7 @@ namespace Game
 	private:
 
 		WSRockObject*					CreateRockObject(const Vector2f & pos);
+		void							ApplyForcesToRocks(float dtime);
 
 		float							m_timeSinceLastWave;
 		const float						m_timeBetweenWaves;
